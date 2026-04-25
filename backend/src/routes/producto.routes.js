@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var express_1 = require("express");
+var producto_controller_1 = require("../controllers/producto.controller");
+var auth_middleware_1 = require("../middlewares/auth.middleware");
+var rbac_middleware_1 = require("../middlewares/rbac.middleware");
+var validator_1 = require("../middlewares/validator");
+var producto_schema_1 = require("../schemas/producto.schema");
+var router = (0, express_1.Router)();
+router.get('/', producto_controller_1.productoController.listar);
+router.get('/:id', producto_controller_1.productoController.obtener);
+router.post('/', auth_middleware_1.authenticate, (0, rbac_middleware_1.requireRole)(rbac_middleware_1.Role.ADMINISTRADOR, rbac_middleware_1.Role.GERENTE_INVENTARIO), (0, validator_1.validateBody)(producto_schema_1.crearProductoSchema), producto_controller_1.productoController.crear);
+router.put('/:id', auth_middleware_1.authenticate, (0, rbac_middleware_1.requireRole)(rbac_middleware_1.Role.ADMINISTRADOR, rbac_middleware_1.Role.GERENTE_INVENTARIO), (0, validator_1.validateBody)(producto_schema_1.actualizarProductoSchema), producto_controller_1.productoController.actualizar);
+router.delete('/:id', auth_middleware_1.authenticate, (0, rbac_middleware_1.requireRole)(rbac_middleware_1.Role.ADMINISTRADOR), producto_controller_1.productoController.eliminar);
+exports.default = router;

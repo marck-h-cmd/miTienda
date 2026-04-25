@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var express_1 = require("express");
+var carrito_controller_1 = require("../controllers/carrito.controller");
+var auth_middleware_1 = require("../middlewares/auth.middleware");
+var validator_1 = require("../middlewares/validator");
+var carrito_schema_1 = require("../schemas/carrito.schema");
+var router = (0, express_1.Router)();
+router.get('/', auth_middleware_1.optionalAuth, carrito_controller_1.carritoController.obtener);
+router.post('/items', auth_middleware_1.optionalAuth, (0, validator_1.validateBody)(carrito_schema_1.agregarItemSchema), carrito_controller_1.carritoController.agregar);
+router.put('/items/:itemId', auth_middleware_1.optionalAuth, (0, validator_1.validateBody)(carrito_schema_1.actualizarItemSchema), carrito_controller_1.carritoController.actualizar);
+router.delete('/items/:itemId', auth_middleware_1.optionalAuth, carrito_controller_1.carritoController.eliminar);
+router.delete('/:carritoId', auth_middleware_1.optionalAuth, carrito_controller_1.carritoController.vaciar);
+exports.default = router;

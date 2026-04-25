@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var express_1 = require("express");
+var estadisticas_controller_1 = require("../controllers/estadisticas.controller");
+var auth_middleware_1 = require("../middlewares/auth.middleware");
+var rbac_middleware_1 = require("../middlewares/rbac.middleware");
+var router = (0, express_1.Router)();
+router.get('/tendencia-ventas', auth_middleware_1.authenticate, (0, rbac_middleware_1.requireRole)(rbac_middleware_1.Role.ADMINISTRADOR, rbac_middleware_1.Role.GERENTE_VENTAS), estadisticas_controller_1.estadisticasController.tendenciaVentas);
+router.get('/analisis-abc', auth_middleware_1.authenticate, (0, rbac_middleware_1.requireRole)(rbac_middleware_1.Role.ADMINISTRADOR, rbac_middleware_1.Role.GERENTE_VENTAS), estadisticas_controller_1.estadisticasController.analisisABC);
+router.get('/analisis-rfm', auth_middleware_1.authenticate, (0, rbac_middleware_1.requireRole)(rbac_middleware_1.Role.ADMINISTRADOR, rbac_middleware_1.Role.GERENTE_VENTAS), estadisticas_controller_1.estadisticasController.analisisRFM);
+exports.default = router;
