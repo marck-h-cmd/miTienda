@@ -1,4 +1,4 @@
-import { seg_usuarios } from './../../node_modules/.prisma/client/index.d';
+import { seg_usuarios } from './../../node_modules/.prisma/client/default';
 import prisma from '../config/database';
 import { NotFoundError } from '../middlewares/errorHandler';
 import { Prisma } from '@prisma/client';

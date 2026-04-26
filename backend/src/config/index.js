@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
-var dotenv_1 = require("dotenv");
-dotenv_1.default.config();
+require("dotenv/config");
 exports.config = {
     app: {
         nodeEnv: process.env.NODE_ENV || 'development',
