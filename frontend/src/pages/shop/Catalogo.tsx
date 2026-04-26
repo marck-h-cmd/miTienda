@@ -13,10 +13,17 @@ export default function Catalogo() {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['productos', page, limit, filters],
     queryFn: () => productoService.listar({ page: String(page), limit: String(limit), ...filters }),
+    retry: 1,
   });
+
+
+  // Extrae los productos de forma segura
+  const productos = Array.isArray(data?.productos) ? data.productos : [];
+  const total = typeof data?.total === 'number' ? data.total : 0;
+  
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -33,7 +40,7 @@ export default function Catalogo() {
           {/* Barra superior */}
           <div className="flex justify-between items-center mb-6">
             <p className="text-gray-600">
-              {data?.total || 0} productos encontrados
+              {total} productos encontrados
             </p>
             <div className="flex items-center gap-2">
               <select
@@ -54,23 +61,38 @@ export default function Catalogo() {
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+              Error al cargar productos: {error instanceof Error ? error.message : 'Error desconocido'}
+            </div>
+          )}
+
           {isLoading ? (
             <LoadingSpinner />
+          ) : productos.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No hay productos disponibles</p>
+              {data && <p className="text-gray-400 text-sm mt-2">Debug: {JSON.stringify(data).substring(0, 100)}</p>}
+            </div>
           ) : (
             <>
               <div className={viewMode === 'grid' 
                 ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
                 : 'flex flex-col gap-4'
               }>
-                {data?.data?.map((producto) => (
-                  <ProductCard key={producto.id} producto={producto} viewMode={viewMode} />
+                {productos.map((producto) => (
+                  <ProductCard 
+                    key={producto.id} 
+                    producto={producto} 
+                    viewMode={viewMode} 
+                  />
                 ))}
               </div>
 
-              {data && data.total > limit && (
+              {total > limit && (
                 <Pagination
-                  currentPage={data.page}
-                  totalPages={Math.ceil(data.total / data.limit)}
+                  currentPage={page}
+                  totalPages={Math.ceil(total / limit)}
                   onPageChange={setPage}
                 />
               )}

@@ -12,7 +12,7 @@ export function formatCurrency(amount: number, currency = 'PEN'): string {
     EUR: '€',
   };
   
-  return `${symbols[currency] || currency} ${amount.toFixed(2)}`;
+  return `${symbols[currency] || currency} ${amount /*.toFixed(2) */}`;
 }
 
 export function formatDate(dateString: string): string {

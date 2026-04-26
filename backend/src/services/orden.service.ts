@@ -13,20 +13,87 @@ interface CrearOrdenDTO {
 
 export class OrdenService {
   /**
-   * Inicia el proceso de checkout creando la orden y la preferencia de pago
+   * Obtiene las opciones de envío disponibles.
+   * Direcciones → cli_direcciones (tabla del módulo de clientes)
+   * Métodos     → ord_metodos_envio
+   */
+  async obtenerOpcionesEnvio(usuarioId: string) {
+    const [direcciones, metodos] = await Promise.all([
+      // ✅ Tabla correcta: cli_direcciones, no ord_direcciones_envio
+      prisma.cli_direcciones.findMany({
+        where: { usuario_id: usuarioId },
+      }),
+      prisma.ord_metodos_envio.findMany({
+        where: { activo: true },
+      }),
+    ]);
+    console.log('Direcciones obtenidas:', direcciones);
+
+    return { direcciones, metodos };
+  }
+
+  /**
+   * Busca una dirección en cli_direcciones por id + usuarioId.
+   * Si no la encuentra, usa la principal o la primera disponible.
+   */
+  private async obtenerOCrearDireccion(usuarioId: string, direccionId: string) {
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(direccionId);
+
+    if (isUUID) {
+      const direccion = await prisma.cli_direcciones.findFirst({
+        where: { id: direccionId, usuario_id: usuarioId },
+      });
+      if (direccion) return direccion;
+    }
+
+    // Fallback 1: dirección principal
+    const principal = await prisma.cli_direcciones.findFirst({
+      where: { usuario_id: usuarioId, es_principal: true },
+    });
+    if (principal) return principal;
+
+    // Fallback 2: cualquier dirección del usuario
+    const cualquiera = await prisma.cli_direcciones.findFirst({
+      where: { usuario_id: usuarioId },
+    });
+    if (cualquiera) return cualquiera;
+
+    throw new AppError(
+      'No hay direcciones de envío disponibles. Por favor, agrega una dirección.',
+      400
+    );
+  }
+
+  /**
+   * Inicia el proceso de checkout creando la orden y la preferencia de pago.
    */
   async iniciarCheckout(data: CrearOrdenDTO) {
-    // Usar transacción para garantizar atomicidad
+    const direccion = await this.obtenerOCrearDireccion(data.usuarioId, data.direccionEnvioId);
+
+    // Resolver método de envío
+    const metodoEnvio = await prisma.ord_metodos_envio.findFirst({
+      where: {
+        OR: [
+          { id: data.metodoEnvioId },
+          { nombre: { contains: data.metodoEnvioId, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (!metodoEnvio) {
+      const fallback = await prisma.ord_metodos_envio.findFirst({ where: { activo: true } });
+      if (!fallback) throw new AppError('No hay métodos de envío disponibles', 400);
+      data.metodoEnvioId = fallback.id;
+    } else {
+      data.metodoEnvioId = metodoEnvio.id;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      // Obtener el carrito del usuario
       const carrito = await tx.ord_carritos.findFirst({
         where: { usuario_id: data.usuarioId },
         include: {
-          ord_items_carrito: {
-            include: {
-              cat_productos: true,
-            },
-          },
+          ord_items_carrito: { include: { cat_productos: true } },
         },
       });
 
@@ -34,7 +101,7 @@ export class OrdenService {
         throw new ConflictError('El carrito está vacío');
       }
 
-      // Validar stock disponible
+      // Validar stock
       for (const item of carrito.ord_items_carrito) {
         const stock = await tx.inv_stock_producto.findFirst({
           where: {
@@ -42,7 +109,6 @@ export class OrdenService {
             cantidad_fisica: { gte: item.cantidad },
           },
         });
-
         if (!stock) {
           throw new ConflictError(
             `Stock insuficiente para el producto: ${item.cat_productos.nombre}`
@@ -50,13 +116,13 @@ export class OrdenService {
         }
       }
 
-      // Calcular totales
+      // Calcular subtotal
       const subtotal = carrito.ord_items_carrito.reduce(
         (sum, item) => sum + Number(item.precio_unitario) * item.cantidad,
         0
       );
 
-      // Aplicar cupón si existe
+      // Cupón
       let descuento = 0;
       if (data.cuponCodigo) {
         const cupon = await tx.ord_cupones.findFirst({
@@ -68,11 +134,11 @@ export class OrdenService {
             activo: true,
           },
         });
-
         if (cupon) {
-          descuento = cupon.tipo_descuento === 'porcentaje'
-            ? (subtotal * Number(cupon.valor_descuento)) / 100
-            : Number(cupon.valor_descuento);
+          descuento =
+            cupon.tipo_descuento === 'porcentaje'
+              ? (subtotal * Number(cupon.valor_descuento)) / 100
+              : Number(cupon.valor_descuento);
 
           await tx.ord_cupones.update({
             where: { id: cupon.id },
@@ -81,27 +147,38 @@ export class OrdenService {
         }
       }
 
-      // Calcular impuestos
       const subtotalConDescuento = subtotal - descuento;
       const impuesto = (subtotalConDescuento * config.negocio.igvPorcentaje) / 100;
 
-      // Obtener costo de envío
-      const metodoEnvio = await tx.ord_metodos_envio.findUnique({
+      const metodoEnvioData = await tx.ord_metodos_envio.findUnique({
         where: { id: data.metodoEnvioId },
       });
+      if (!metodoEnvioData) throw new NotFoundError('Método de envío no encontrado');
 
-      if (!metodoEnvio) {
-        throw new NotFoundError('Método de envío no encontrado');
-      }
-
-      const costoEnvio = Number(metodoEnvio.precio);
+      const costoEnvio = Number(metodoEnvioData.precio);
       const total = subtotalConDescuento + impuesto + costoEnvio;
 
-      // Crear la orden
+      // Crear snapshot inmutable de la dirección en ord_direcciones_envio
+      // (ord_ordenes.direccion_envio_id apunta a esta tabla, no a cli_direcciones)
+      const dirEnvio = await tx.ord_direcciones_envio.create({
+        data: {
+          usuario_id: direccion.usuario_id,
+          nombre: direccion.nombre,
+          apellido: direccion.apellido,
+          direccion: direccion.direccion,
+          ciudad: direccion.ciudad,
+          departamento: direccion.departamento,
+          codigo_postal: direccion.codigo_postal ?? null,
+          telefono: direccion.telefono,
+          es_principal: direccion.es_principal,
+        },
+      });
+
+      // Crear orden usando el id del snapshot recién creado
       const orden = await tx.ord_ordenes.create({
         data: {
           cliente_id: data.usuarioId,
-          direccion_envio_id: data.direccionEnvioId,
+          direccion_envio_id: dirEnvio.id,  // ← ahora sí apunta a ord_direcciones_envio
           metodo_envio_id: data.metodoEnvioId,
           subtotal,
           descuento,
@@ -114,7 +191,7 @@ export class OrdenService {
         },
       });
 
-      // Crear items de la orden
+      // Crear items
       const items = await Promise.all(
         carrito.ord_items_carrito.map((item) =>
           tx.ord_items_orden.create({
@@ -134,7 +211,6 @@ export class OrdenService {
       const fechaExpiracionReserva = new Date(
         Date.now() + config.negocio.stockReservaTimeout * 60 * 1000
       );
-
       await Promise.all(
         carrito.ord_items_carrito.map((item) =>
           tx.inv_stock_producto.updateMany({
@@ -148,7 +224,7 @@ export class OrdenService {
         )
       );
 
-      // Registrar historial de estados
+      // Historial
       await tx.ord_historial_estados.create({
         data: {
           orden_id: orden.id,
@@ -162,16 +238,12 @@ export class OrdenService {
       return { orden, items, carritoId: carrito.id };
     });
 
-    // Obtener datos del cliente para Mercado Pago
+    // Cliente para Mercado Pago
     const cliente = await prisma.seg_usuarios.findUnique({
       where: { id: data.usuarioId },
     });
+    if (!cliente) throw new NotFoundError('Cliente no encontrado');
 
-    if (!cliente) {
-      throw new NotFoundError('Cliente no encontrado');
-    }
-
-    // Crear preferencia de pago en Mercado Pago
     const preferencia = await mercadopagoService.crearPreferencia({
       ordenId: result.orden.id,
       items: result.items.map((item) => ({
@@ -186,7 +258,6 @@ export class OrdenService {
       },
     });
 
-    // Guardar la preferencia de pago
     await prisma.ord_transacciones_pago.create({
       data: {
         orden_id: result.orden.id,
@@ -199,7 +270,7 @@ export class OrdenService {
       },
     });
 
-    // Limpiar el carrito después del checkout
+    // Limpiar carrito
     await prisma.ord_items_carrito.deleteMany({
       where: { carrito_id: result.carritoId },
     });
@@ -210,29 +281,22 @@ export class OrdenService {
       ordenId: result.orden.id,
       total: result.orden.total,
       initPoint: preferencia.initPoint,
+      // preferenceId:     preferencia.preferenceId,
       sandboxInitPoint: preferencia.sandboxInitPoint,
     };
   }
 
   async obtenerOrden(ordenId: string, usuarioId: string) {
     const orden = await prisma.ord_ordenes.findFirst({
-      where: {
-        id: ordenId,
-        cliente_id: usuarioId,
-      },
+      where: { id: ordenId, cliente_id: usuarioId },
       include: {
         ord_items_orden: true,
-        ord_direcciones_envio: true,
         ord_metodos_envio: true,
         ord_historial_estados: true,
         ord_transacciones_pago: true,
       },
     });
-
-    if (!orden) {
-      throw new NotFoundError('Orden no encontrada');
-    }
-
+    if (!orden) throw new NotFoundError('Orden no encontrada');
     return orden;
   }
 
@@ -243,40 +307,31 @@ export class OrdenService {
       throw new ConflictError('La orden no puede ser cancelada en su estado actual');
     }
 
-    // Si está pagada, reembolsar
     if (orden.estado === 'pagada') {
       const transaccion = await prisma.ord_transacciones_pago.findFirst({
         where: { orden_id: ordenId, estado: 'aprobado' },
       });
-
       if (transaccion?.referencia_externa) {
         await mercadopagoService.reembolsarPago(transaccion.referencia_externa);
       }
     }
 
-    // Liberar stock reservado
-    const items = await prisma.ord_items_orden.findMany({
-      where: { orden_id: ordenId },
-    });
+    const items = await prisma.ord_items_orden.findMany({ where: { orden_id: ordenId } });
 
     await Promise.all(
       items.map((item) =>
         prisma.inv_stock_producto.updateMany({
           where: { producto_id: item.producto_id },
-          data: {
-            cantidad_reservada: { decrement: item.cantidad },
-          },
+          data: { cantidad_reservada: { decrement: item.cantidad } },
         })
       )
     );
 
-    // Actualizar orden
     await prisma.ord_ordenes.update({
       where: { id: ordenId },
       data: { estado: 'cancelada' },
     });
 
-    // Registrar en historial
     await prisma.ord_historial_estados.create({
       data: {
         orden_id: ordenId,
@@ -289,6 +344,34 @@ export class OrdenService {
 
     logger.info(`Orden #${ordenId} cancelada`);
     return { mensaje: 'Orden cancelada exitosamente' };
+  }
+
+  /**
+   * Lista las órdenes de un usuario con paginación.
+   * Endpoint: GET /api/v1/ordenes?page=1&limit=10
+   */
+  async listarOrdenes(usuarioId: string, filtros: any) {
+    const { page = 1, limit = 10 } = filtros;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where = { cliente_id: usuarioId };
+
+    const [ordenes, total] = await Promise.all([
+      prisma.ord_ordenes.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        orderBy: { fecha_pedido: 'desc' },
+        include: {
+          ord_items_orden: true,
+          ord_metodos_envio: true,
+          ord_transacciones_pago: { select: { estado: true, tipo_pago: true } },
+        },
+      }),
+      prisma.ord_ordenes.count({ where }),
+    ]);
+
+    return { ordenes, total, page: Number(page), limit: Number(limit) };
   }
 }
 

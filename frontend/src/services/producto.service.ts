@@ -4,7 +4,7 @@ import { ApiResponse, PaginatedResponse, IProducto } from '@/types';
 export const productoService = {
   listar: async (params?: Record<string, string>) => {
     const { data } = await api.get<PaginatedResponse<IProducto>>('/productos', { params });
-    console.log('Respuesta de listar productos:', data);
+    // console.log('Respuesta de listar productos:', data);
     return data;
   },
   

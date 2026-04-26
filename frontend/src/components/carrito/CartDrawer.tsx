@@ -40,19 +40,26 @@ export default function CartDrawer() {
               {items.map((item) => (
                 <div key={item.id} className="flex gap-3 border-b pb-4">
                   <img
-                    src={item.cat_productos?.cat_imagenes_producto?.[0]?.url || '/placeholder.png'}
-                    alt={item.cat_productos?.nombre}
+                    src={
+                      item.cat_productos?.cat_imagenes_producto?.[0]?.url ||
+                      item.producto?.imagen ||
+                      '/placeholder.png'
+                    }
+                    alt={item.cat_productos?.nombre || item.producto?.nombre || 'Producto'}
                     className="w-20 h-20 object-cover rounded"
                   />
                   <div className="flex-1">
-                    <h4 className="text-sm font-semibold line-clamp-2">{item.cat_productos?.nombre}</h4>
+                    <h4 className="text-sm font-semibold line-clamp-2">
+                      {item.cat_productos?.nombre || item.producto?.nombre}
+                    </h4>
                     <p className="text-primary-600 font-bold mt-1">
-                      {formatCurrency(item.precio_unitario)}
+                      {formatCurrency(item.precio_unitario || item.precio || 0)}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
-                        onClick={() => actualizar({ itemId: item.id, cantidad: item.cantidad - 1 })}
+                        onClick={() => actualizar({ itemId: item.id, cantidad: Math.max(1, item.cantidad - 1) })}
                         className="p-1 border rounded hover:bg-gray-100"
+                        disabled={item.cantidad <= 1}
                       >
                         <Minus size={14} />
                       </button>

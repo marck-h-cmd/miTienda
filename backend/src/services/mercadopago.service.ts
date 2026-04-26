@@ -46,18 +46,22 @@ export class MercadoPagoService {
           surname: data.cliente.apellido,
         },
         back_urls: {
-          success: `${config.app.frontendUrl}/ordenes/${data.ordenId}/pago-exitoso`,
-          failure: `${config.app.frontendUrl}/ordenes/${data.ordenId}/pago-fallido`,
-          pending: `${config.app.frontendUrl}/ordenes/${data.ordenId}/pago-pendiente`,
+          success: `${config.app.frontendUrl}/checkout/exito?ordenId=${data.ordenId}`,
+          failure: `${config.app.frontendUrl}/checkout/fallo?ordenId=${data.ordenId}`,
+          pending: `${config.app.frontendUrl}/checkout/pendiente?ordenId=${data.ordenId}`,
         },
-        auto_return: 'approved',
+        // auto_return requiere URLs públicas — solo en producción
+        ...(config.app.nodeEnv === 'production' && { auto_return: 'approved' }),
         external_reference: data.ordenId,
-        notification_url: `${config.app.apiUrl}/api/v1/webhooks/mercadopago`,
+        // notification_url también requiere URL pública
+        ...(config.app.nodeEnv === 'production' && {
+          notification_url: `${config.app.apiUrl}/api/v1/webhooks/mercadopago`,
+        }),
         statement_descriptor: config.empresa.nombre.substring(0, 22),
         payment_methods: {
           excluded_payment_methods: [],
           excluded_payment_types: [],
-          installments: 12, // Hasta 12 cuotas
+          installments: 12,
         },
       };
 
@@ -115,7 +119,7 @@ export class MercadoPagoService {
 
         // Buscar la orden asociada
         const prisma = (await import('../config/database')).default;
-        
+
         const orden = await prisma.ord_ordenes.findFirst({
           where: {
             ord_transacciones_pago: {
@@ -244,9 +248,9 @@ export class MercadoPagoService {
     try {
       const refund = monto
         ? await paymentRefundClient.create({
-            payment_id: paymentId,
-            body: { amount: monto },
-          })
+          payment_id: paymentId,
+          body: { amount: monto },
+        })
         : await paymentRefundClient.total({ payment_id: paymentId });
 
       return {

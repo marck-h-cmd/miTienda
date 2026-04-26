@@ -7,61 +7,28 @@ import { checkoutSchema } from '../schemas/orden.schema';
 
 const router = Router();
 
-/**
- * @swagger
- * /api/v1/ordenes/checkout:
- *   post:
- *     summary: Iniciar checkout y crear preferencia de pago en Mercado Pago
- *     tags: [Órdenes]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - direccionEnvioId
- *               - metodoEnvioId
- *             properties:
- *               direccionEnvioId:
- *                 type: string
- *               metodoEnvioId:
- *                 type: string
- *               cuponCodigo:
- *                 type: string
- *     responses:
- *       201:
- *         description: Checkout iniciado, retorna URL de pago de Mercado Pago
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     ordenId:
- *                       type: string
- *                     total:
- *                       type: number
- *                     initPoint:
- *                       type: string
- *                     sandboxInitPoint:
- *                       type: string
- */
+// ✅ Un solo authenticate para todas las rutas del módulo
+router.use(authenticate);
+
+// GET  /api/v1/ordenes
+router.get('/', ordenController.listarOrdenes.bind(ordenController));
+
+// ⚠️ Rutas estáticas ANTES de /:id o Express las interpreta como id
+// GET  /api/v1/ordenes/opciones-envio
+router.get('/opciones-envio', ordenController.obtenerOpcionesEnvio.bind(ordenController));
+
+// POST /api/v1/ordenes/checkout
 router.post(
   '/checkout',
-  authenticate,
   checkoutLimiter,
   validateBody(checkoutSchema),
-  ordenController.iniciarCheckout
+  ordenController.iniciarCheckout.bind(ordenController)
 );
 
-router.get('/:id', authenticate, ordenController.obtenerOrden);
-router.post('/:id/cancelar', authenticate, ordenController.cancelarOrden);
+// GET  /api/v1/ordenes/:id
+router.get('/:id', ordenController.obtenerOrden.bind(ordenController));
+
+// POST /api/v1/ordenes/:id/cancelar
+router.post('/:id/cancelar', ordenController.cancelarOrden.bind(ordenController));
 
 export default router;

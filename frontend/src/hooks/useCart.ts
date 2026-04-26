@@ -3,7 +3,7 @@ import { carritoService } from '@/services/carrito.service';
 import { useCartStore } from '@/stores/cartStore';
 import { useAuthStore } from '@/stores/authStore';
 import { ICarrito } from '@/types/index';
-
+import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 export function useCart() {
@@ -11,19 +11,29 @@ export function useCart() {
   const { isAuthenticated } = useAuthStore();
   const { setItems, items, getItemCount, getTotal } = useCartStore();
 
-  const { data: carrito, isLoading } =  useQuery<ICarrito | null>({
-    queryKey: ['carrito'],
-    queryFn: () => carritoService.obtener(),
-    enabled: isAuthenticated,
-    initialData: {},
-    placeholderData: {},
-    select: (data) => data || {},
-    onSuccess: (data: ICarrito | null | undefined) => {
-      if (data?.ord_items_carrito) {
-        setItems(data.ord_items_carrito);
-      }
-    },
+  // Generar/obtener sessionId para usuarios no autenticados
+  const sessionId = typeof window !== 'undefined' 
+    ? localStorage.getItem('sessionId') || (() => {
+        const id = `session_${Date.now()}_${Math.random()}`;
+        localStorage.setItem('sessionId', id);
+        return id;
+      })()
+    : undefined;
+
+  const { data: carrito, isLoading, refetch } = useQuery<ICarrito | null>({
+    queryKey: ['carrito', isAuthenticated, sessionId],
+    queryFn: () => carritoService.obtener(sessionId),
+    enabled: true, // Siempre habilitado
+    staleTime: 30000,
   });
+
+  // Sincronizar carrito del servidor con el store local
+  useEffect(() => {
+    console.log('Carrito del servidor:', carrito);
+    if (carrito?.ord_items_carrito && carrito.ord_items_carrito.length > 0) {
+      setItems(carrito.ord_items_carrito);
+    }
+  }, [carrito, setItems]);
 
   const agregarMutation = useMutation({
     mutationFn: carritoService.agregar,
@@ -52,6 +62,10 @@ export function useCart() {
       carritoService.actualizarItem(itemId, cantidad),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carrito'] });
+      toast.success('Cantidad actualizada');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al actualizar');
     },
   });
 

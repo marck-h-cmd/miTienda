@@ -31,6 +31,11 @@ import ClientesAdmin from '@/pages/admin/ClientesAdmin';
 import Reportes from '@/pages/admin/Reportes';
 import Estadisticas from '@/pages/admin/Estadisticas';
 
+import CheckoutExito    from '@/pages/checkout/CheckoutExito';
+import CheckoutFallo    from '@/pages/checkout/CheckoutFallo';
+import CheckoutPendiente from '@/pages/checkout/CheckoutPendiente';
+
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -43,6 +48,11 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/recuperar-password" element={<RecuperarPassword />} />
+
+        {/* Checkout Result Pages - Públicas (sin autenticación) */}
+        <Route path="/checkout/exito" element={<CheckoutExito />} />
+        <Route path="/checkout/fallo" element={<CheckoutFallo />} />
+        <Route path="/checkout/pendiente" element={<CheckoutPendiente />} />
         
         {/* Rutas protegidas cliente */}
         <Route element={<ProtectedRoute roles={[Role.CLIENTE]} />}>

@@ -6,6 +6,7 @@ export const carritoService = {
     const { data } = await api.get<ApiResponse<ICarrito>>('/carrito', {
       headers: sessionId ? { 'x-session-id': sessionId } : {},
     });
+    console.log('Respuesta de obtener carrito:', data.data);
     return data.data;
   },
   

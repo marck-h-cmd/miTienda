@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const checkoutSchema = z.object({
-  direccionEnvioId: z.string().uuid('ID de dirección inválido'),
-  metodoEnvioId: z.string().uuid('ID de método de envío inválido'),
+  direccionEnvioId: z.string().min(1, 'Dirección requerida'),
+  metodoEnvioId: z.string().min(1, 'Método de envío requerido'),
   cuponCodigo: z.string().optional(),
 });
 
