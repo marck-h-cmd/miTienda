@@ -133,7 +133,9 @@ export default function ProductoDetalle() {
           {/* Descripción */}
           <div>
             <h2 className="font-semibold mb-2">Descripción</h2>
-            <p className="text-gray-700">{producto.descripcion}</p>
+            <p className="text-gray-700">
+              {producto.descripcion_larga || producto.descripcion_corta || '-'}
+            </p>
           </div>
 
           {/* Controles de cantidad y agregar */}
@@ -187,15 +189,17 @@ export default function ProductoDetalle() {
             </div>
             <div>
               <p className="text-gray-500">Peso</p>
-              <p className="font-semibold">-</p>
+              <p className="font-semibold">
+                {typeof producto.peso === 'number' ? `${producto.peso} kg` : '-'}
+              </p>
             </div>
             <div>
               <p className="text-gray-500">Marca</p>
-              <p className="font-semibold">{producto.marca || '-'}</p>
+              <p className="font-semibold">{producto.cat_marcas?.nombre || '-'}</p>
             </div>
             <div>
               <p className="text-gray-500">Código</p>
-              <p className="font-semibold">{producto.codigo || '-'}</p>
+              <p className="font-semibold">{producto.id}</p>
             </div>
           </div>
         </div>

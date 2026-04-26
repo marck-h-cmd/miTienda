@@ -20,7 +20,7 @@ export function useCart() {
       })()
     : undefined;
 
-  const { data: carrito, isLoading, refetch } = useQuery<ICarrito | null>({
+  const { data: carrito, isLoading } = useQuery<ICarrito | null>({
     queryKey: ['carrito', isAuthenticated, sessionId],
     queryFn: () => carritoService.obtener(sessionId),
     enabled: true, // Siempre habilitado
@@ -29,10 +29,12 @@ export function useCart() {
 
   // Sincronizar carrito del servidor con el store local
   useEffect(() => {
-    console.log('Carrito del servidor:', carrito);
-    if (carrito?.ord_items_carrito && carrito.ord_items_carrito.length > 0) {
-      setItems(carrito.ord_items_carrito);
+    if (carrito === undefined) return;
+    if (carrito === null) {
+      setItems([]);
+      return;
     }
+    setItems(carrito.ord_items_carrito ?? []);
   }, [carrito, setItems]);
 
   const agregarMutation = useMutation({

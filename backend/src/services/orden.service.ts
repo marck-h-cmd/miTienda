@@ -281,7 +281,7 @@ export class OrdenService {
       ordenId: result.orden.id,
       total: result.orden.total,
       initPoint: preferencia.initPoint,
-      // preferenceId:     preferencia.preferenceId,
+      preferenceId:     preferencia.preferenceId,
       sandboxInitPoint: preferencia.sandboxInitPoint,
     };
   }

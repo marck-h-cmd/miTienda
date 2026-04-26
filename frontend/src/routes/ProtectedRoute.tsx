@@ -1,11 +1,13 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import type { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
   roles?: string[];
+  children?: ReactNode;
 }
 
-export function ProtectedRoute({ roles }: ProtectedRouteProps) {
+export function ProtectedRoute({ roles, children }: ProtectedRouteProps) {
   const { isAuthenticated, hasRole } = useAuthStore();
 
   if (!isAuthenticated) {
@@ -16,5 +18,6 @@ export function ProtectedRoute({ roles }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
+  if (children) return children;
   return <Outlet />;
 }

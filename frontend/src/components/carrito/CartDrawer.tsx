@@ -42,18 +42,17 @@ export default function CartDrawer() {
                   <img
                     src={
                       item.cat_productos?.cat_imagenes_producto?.[0]?.url ||
-                      item.producto?.imagen ||
                       '/placeholder.png'
                     }
-                    alt={item.cat_productos?.nombre || item.producto?.nombre || 'Producto'}
+                    alt={item.cat_productos?.nombre || 'Producto'}
                     className="w-20 h-20 object-cover rounded"
                   />
                   <div className="flex-1">
                     <h4 className="text-sm font-semibold line-clamp-2">
-                      {item.cat_productos?.nombre || item.producto?.nombre}
+                      {item.cat_productos?.nombre}
                     </h4>
                     <p className="text-primary-600 font-bold mt-1">
-                      {formatCurrency(item.precio_unitario || item.precio || 0)}
+                      {formatCurrency(item.precio_unitario ?? 0)}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button

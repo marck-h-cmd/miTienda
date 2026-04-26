@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { carritoService } from '@/services/carrito.service';
 import { useAuthStore } from '@/stores/authStore';
 import { useCartStore } from '@/stores/cartStore';
+import { ICarrito } from '@/types';
 
 export function useCarrito() {
   const { isAuthenticated } = useAuthStore();
@@ -18,7 +19,7 @@ export function useCarrito() {
       })()
     : undefined;
 
-  const { data: carrito, isLoading, error, refetch } = useQuery({
+  const { data: carrito, isLoading, error, refetch } = useQuery<ICarrito | null>({
     queryKey: ['carrito', isAuthenticated, sessionId],
     queryFn: () => carritoService.obtener(sessionId),
     enabled: true, // Siempre habilitado, con o sin autenticación
@@ -28,23 +29,22 @@ export function useCarrito() {
 
   // Sincronizar carrito con store
   useEffect(() => {
-    if (carrito?.ord_items_carrito) {
-      const items = carrito.ord_items_carrito.map((item: any) => ({
+    if (carrito === undefined) return;
+    if (carrito === null) {
+      setItems([]);
+      return;
+    }
+
+    const items = (carrito.ord_items_carrito ?? []).map((item: any) => ({
         id: item.id,
+        carrito_id: item.carrito_id,
         producto_id: item.producto_id,
         cantidad: item.cantidad,
-        precio: item.precio_unitario,
-        producto: {
-          id: item.cat_productos?.id,
-          nombre: item.cat_productos?.nombre,
-          imagen: item.cat_productos?.cat_imagenes_producto?.[0]?.url,
-          stock: item.cat_productos?.inv_stock_producto?.[0]?.cantidad_fisica ?? 0,
-        },
+        precio_unitario: Number(item.precio_unitario ?? 0),
+        cat_productos: item.cat_productos,
       }));
       
-      setItems(items);
-      console.log('Carrito sincronizado:', items);
-    }
+    setItems(items);
   }, [carrito, setItems]);
 
   const invalidateCarrito = () => {
