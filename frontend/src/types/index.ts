@@ -195,3 +195,18 @@ export const ESTADOS_ORDEN: Record<string, string> = {
   cancelada: 'Cancelada',
   devuelta: 'Devuelta',
 };
+
+export interface IItemListaDeseos {
+  id: string;
+  lista_id: string;
+  producto_id: string;
+  created_at: string;
+  cat_productos?: IProducto;
+}
+
+export interface IListaDeseos {
+  id: string;
+  usuario_id: string;
+  created_at: string;
+  cli_items_lista_deseos: IItemListaDeseos[];
+}

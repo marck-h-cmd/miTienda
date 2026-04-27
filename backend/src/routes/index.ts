@@ -13,6 +13,7 @@ import categoriaRoutes from './categoria.routes';
 import marcaRoutes from './marca.routes';
 import unidadMedidaRoutes from './unidadMedida.routes';
 import subcategoriaRoutes from './subcategoria.routes';
+import favoritosRoutes from './favoritos.routes';
 
 
 
@@ -43,5 +44,7 @@ router.use('/categorias', categoriaRoutes);
 router.use('/marcas', marcaRoutes);
 router.use('/unidadesMedida', unidadMedidaRoutes);
 router.use('/subcategorias', subcategoriaRoutes);
+router.use('/favoritos', favoritosRoutes);
+
 
 export default router;

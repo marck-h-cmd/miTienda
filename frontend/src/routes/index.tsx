@@ -34,7 +34,7 @@ import Estadisticas from '@/pages/admin/Estadisticas';
 import CheckoutExito    from '@/pages/checkout/CheckoutExito';
 import CheckoutFallo    from '@/pages/checkout/CheckoutFallo';
 import CheckoutPendiente from '@/pages/checkout/CheckoutPendiente';
-
+import Favoritos from '@/pages/shop/Favoritos';
 
 export default function AppRoutes() {
   return (
@@ -43,6 +43,7 @@ export default function AppRoutes() {
       <Route element={<ShopLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/catalogo" element={<Catalogo />} />
+        <Route path="/favoritos" element={<Favoritos />} />
         <Route path="/producto/:id" element={<ProductoDetalle  />} />
         <Route path="/carrito" element={<CarritoPage />} />
         <Route path="/login" element={<Login />} />

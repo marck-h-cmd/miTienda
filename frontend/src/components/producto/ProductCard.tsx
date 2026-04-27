@@ -5,6 +5,7 @@ import { useCartStore } from '@/stores/cartStore';
 import { useAuthStore } from '@/stores/authStore';
 import { carritoService } from '@/services/carrito.service';
 import toast from 'react-hot-toast';
+import { useFavoritos } from '@/hooks/useFavoritos';
 
 interface ProductCardProps {
   producto: IProducto;
@@ -23,6 +24,11 @@ export default function ProductCard({ producto, viewMode = 'grid' }: ProductCard
   const stock = producto.inv_stock_producto?.[0]?.cantidad_fisica ?? 0;
   const precio = producto.precio_oferta || producto.precio_venta;
   const tieneOferta = !!producto.precio_oferta;
+  
+// Dentro del componente, añadir:
+const { isFavorito, toggleFavorito, isToggling } = useFavoritos();
+const esFavorito = isFavorito(producto.id);
+
 
   const handleAgregarCarrito = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -99,11 +105,20 @@ export default function ProductCard({ producto, viewMode = 'grid' }: ProductCard
             OFERTA
           </span>
         )}
+  
         <button
-          onClick={(e) => e.preventDefault()}
-          className="absolute top-2 right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100"
+          onClick={(e) => {
+            e.preventDefault();
+            toggleFavorito(producto.id);
+          }}
+          disabled={isToggling}
+          className="absolute top-2 right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100 disabled:opacity-50 transition"
+          aria-label={esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos'}
         >
-          <Heart size={18} className="text-gray-400 hover:text-red-500" />
+          <Heart
+            size={18}
+            className={esFavorito ? 'text-red-500 fill-red-500' : 'text-gray-400 hover:text-red-500'}
+          />
         </button>
       </div>
       <div className="p-4">
