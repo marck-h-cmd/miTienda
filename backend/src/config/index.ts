@@ -1,23 +1,28 @@
 import 'dotenv/config';
 
-const parseEnvList = (value: string | undefined, fallback: string): string[] =>
-  (value ?? fallback)
+const parseEnvList = (value: string | undefined): string[] =>
+  (value ?? '')
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean);
 
-const corsOrigins = parseEnvList(
-  process.env.CORS_ORIGINS ?? process.env.FRONTEND_URLS ?? process.env.FRONTEND_URL,
-  'http://localhost:5173'
+const corsOrigins = Array.from(
+  new Set([
+    ...parseEnvList(process.env.CORS_ORIGINS),
+    ...parseEnvList(process.env.FRONTEND_URLS),
+    ...parseEnvList(process.env.FRONTEND_URL),
+  ])
 );
+
+const resolvedCorsOrigins = corsOrigins.length > 0 ? corsOrigins : ['http://localhost:5173'];
 
 export const config = {
   app: {
     nodeEnv: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
     apiUrl: process.env.API_URL || 'http://localhost:3000',
-    frontendUrl: corsOrigins[0] || 'http://localhost:5173',
-    corsOrigins,
+    frontendUrl: resolvedCorsOrigins[0] || 'http://localhost:5173',
+    corsOrigins: resolvedCorsOrigins,
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'default-secret',
