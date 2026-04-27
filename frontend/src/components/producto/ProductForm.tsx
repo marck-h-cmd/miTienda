@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,12 +19,14 @@ const productoSchema = z.object({
   precio_oferta: z.coerce.number().positive().optional(),
   stock_minimo: z.coerce.number().int().positive().default(5),
   estado: z.enum(['activo', 'inactivo', 'borrador']).default('activo'),
+  imagenBase64: z.string().optional(),
 });
 
 type ProductoFormData = z.infer<typeof productoSchema>;
 
 interface ProductFormProps {
   initialData?: Partial<ProductoFormData>;
+  initialImageUrl?: string;
   onSubmit: (data: ProductoFormData) => void;
   isLoading?: boolean;
   categorias?: Array<{ id: string; nombre: string }>;
@@ -33,11 +35,15 @@ interface ProductFormProps {
 
 export default function ProductForm({ 
   initialData, 
+  initialImageUrl,
   onSubmit, 
   isLoading, 
   categorias = [], 
   marcas = [] 
 }: ProductFormProps) {
+  const [imagePreview, setImagePreview] = useState<string>(initialImageUrl || '');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProductoFormData>({
     resolver: zodResolver(productoSchema),
     defaultValues: {
@@ -57,6 +63,28 @@ export default function ProductForm({
       });
     }
   }, [initialData, setValue]);
+
+  useEffect(() => {
+    if (initialImageUrl) {
+      setImagePreview(initialImageUrl);
+    }
+  }, [initialImageUrl]);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      setValue('imagenBase64', result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const selectedCategoria = watch('categoria_id');
   const selectedMarca = watch('marca_id');
@@ -159,6 +187,55 @@ export default function ProductForm({
               <SelectItem value="borrador">Borrador</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {/* Imagen del producto */}
+      <div>
+        <Label htmlFor="imagen">Imagen del producto</Label>
+        <div className="flex flex-col md:flex-row gap-4 items-start">
+          <div className="h-48 w-full md:w-1/3 overflow-hidden rounded border border-dashed border-gray-300 bg-muted">
+            {imagePreview ? (
+              <img
+                src={imagePreview}
+                alt="Vista previa del producto"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center p-4 text-sm text-gray-500">
+                Selecciona una imagen PNG o JPG
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-1 flex-col gap-2">
+            <input
+              id="imagen"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <label
+              htmlFor="imagen"
+              className="inline-flex cursor-pointer items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+            >
+              {selectedFile ? selectedFile.name : 'Seleccionar imagen'}
+            </label>
+            {imagePreview && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSelectedFile(null);
+                  setImagePreview('');
+                  setValue('imagenBase64', undefined as any);
+                }}
+              >
+                Eliminar imagen
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

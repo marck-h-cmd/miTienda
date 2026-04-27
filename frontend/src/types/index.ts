@@ -92,7 +92,18 @@ export interface IOrden {
   ord_items_orden: IOrdenItem[];
   ord_historial_estados: IHistorialEstado[];
   ord_transacciones_pago?: ITransaccionPago[];
+  ord_metodos_envio?: { id: string; nombre: string; precio: number };
+  ord_direcciones_envio?: {
+    nombre: string;
+    apellido: string;
+    direccion: string;
+    ciudad: string;
+    departamento: string;
+    codigo_postal?: string;
+    telefono?: string;
+  };
   cli_clientes?: { nombre: string; apellido: string; email: string };
+  seg_usuarios?: { nombre: string; apellido: string; email?: string };
 }
 
 export interface IOrdenItem {

@@ -239,6 +239,7 @@ export function agregarTabla(
     totalsLabel?: string;
     alternateRows?: boolean;
     compact?: boolean;
+    rowColors?: string[];
   }
 ): void {
   const opts = { alternateRows: true, compact: false, ...options };
@@ -310,9 +311,10 @@ export function agregarTabla(
     row.forEach((cell, i) => {
       const col = columns[i];
       const value = col?.format ? col.format(cell) : String(cell ?? '—');
+      const textColor = opts.rowColors?.[rowIdx] ?? COLORS.bodyText;
       doc.font(FONT.normal)
          .fontSize(opts.compact ? 7.5 : 8)
-         .fillColor(COLORS.bodyText)
+         .fillColor(textColor)
          .text(value, x + CELL_PAD, y + (ROW_H - 8) / 2, {
            width: colWidths[i] - CELL_PAD * 2,
            align: col?.align ?? 'left',

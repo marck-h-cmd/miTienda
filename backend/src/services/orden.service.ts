@@ -288,22 +288,31 @@ export class OrdenService {
     };
   }
 
-  async obtenerOrden(ordenId: string, usuarioId: string) {
+  async obtenerOrden(ordenId: string, usuarioId: string, isAdmin = false) {
+    const where: any = { id: ordenId };
+    if (!isAdmin) {
+      where.cliente_id = usuarioId;
+    }
+
     const orden = await prisma.ord_ordenes.findFirst({
-      where: { id: ordenId, cliente_id: usuarioId },
+      where,
       include: {
         ord_items_orden: true,
         ord_metodos_envio: true,
         ord_historial_estados: true,
         ord_transacciones_pago: true,
+        ord_direcciones_envio: true,
       },
     });
     if (!orden) throw new NotFoundError('Orden no encontrada');
     return orden;
   }
 
-  async cancelarOrden(ordenId: string, usuarioId: string) {
-    const orden = await this.obtenerOrden(ordenId, usuarioId);
+  async cancelarOrden(ordenId: string, usuarioId: string, roles: string[]) {
+    const isAdmin = roles.some((role) =>
+      ['ADMINISTRADOR', 'GERENTE_VENTAS', 'GERENTE_INVENTARIO', 'VENDEDOR'].includes(role)
+    );
+    const orden = await this.obtenerOrden(ordenId, usuarioId, isAdmin);
 
     if (!['pendiente_pago', 'pagada'].includes(orden.estado)) {
       throw new ConflictError('La orden no puede ser cancelada en su estado actual');
@@ -348,16 +357,157 @@ export class OrdenService {
     return { mensaje: 'Orden cancelada exitosamente' };
   }
 
-async listarOrdenes(usuarioId: string, filtros: any) {
-  const { page = 1, limit = 10, estado } = filtros;
+  async actualizarEstado(ordenId: string, usuarioId: string, roles: string[], estado: string) {
+    const isAdmin = roles.some((role) =>
+      ['ADMINISTRADOR', 'GERENTE_VENTAS', 'GERENTE_INVENTARIO', 'VENDEDOR'].includes(role)
+    );
+    const orden = await this.obtenerOrden(ordenId, usuarioId, isAdmin);
+
+    if (orden.estado === estado) {
+      return orden;
+    }
+
+    const ordenActualizada = await prisma.ord_ordenes.update({
+      where: { id: ordenId },
+      data: { estado },
+    });
+
+    await prisma.ord_historial_estados.create({
+      data: {
+        orden_id: ordenId,
+        estado_anterior: orden.estado,
+        estado_nuevo: estado,
+        comentario: 'Estado actualizado desde panel admin',
+        fecha_cambio: new Date(),
+      },
+    });
+
+    logger.info(`Estado de orden #${ordenId} cambiado de ${orden.estado} a ${estado}`);
+    return ordenActualizada;
+  }
+
+  async listarMetodosEnvio() {
+    return prisma.ord_metodos_envio.findMany({
+      where: { activo: true },
+    });
+  }
+
+  async actualizarOrden(ordenId: string, usuarioId: string, roles: string[], data: any) {
+    const isAdmin = roles.some((role) =>
+      ['ADMINISTRADOR', 'GERENTE_VENTAS', 'GERENTE_INVENTARIO', 'VENDEDOR'].includes(role)
+    );
+
+    const orden = await this.obtenerOrden(ordenId, usuarioId, isAdmin);
+    const updateData: any = {};
+
+    if (data.estado) {
+      updateData.estado = data.estado;
+    }
+
+    if (data.metodoEnvioId) {
+      updateData.metodo_envio_id = data.metodoEnvioId;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      if (data.direccionEnvio) {
+        await tx.ord_direcciones_envio.update({
+          where: { id: orden.direccion_envio_id },
+          data: {
+            nombre: data.direccionEnvio.nombre,
+            apellido: data.direccionEnvio.apellido,
+            direccion: data.direccionEnvio.direccion,
+            ciudad: data.direccionEnvio.ciudad,
+            departamento: data.direccionEnvio.departamento,
+            codigo_postal: data.direccionEnvio.codigo_postal || null,
+            telefono: data.direccionEnvio.telefono,
+          },
+        });
+      }
+
+      let ordenActualizada = orden;
+      if (Object.keys(updateData).length > 0) {
+        ordenActualizada = await tx.ord_ordenes.update({
+          where: { id: ordenId },
+          data: updateData,
+        });
+      }
+
+      if (data.estado && data.estado !== orden.estado) {
+        await tx.ord_historial_estados.create({
+          data: {
+            orden_id: ordenId,
+            estado_anterior: orden.estado,
+            estado_nuevo: data.estado,
+            comentario: 'Orden actualizada desde panel admin',
+            fecha_cambio: new Date(),
+          },
+        });
+      }
+
+      return tx.ord_ordenes.findUnique({
+        where: { id: ordenId },
+        include: {
+          ord_items_orden: true,
+          ord_metodos_envio: true,
+          ord_historial_estados: true,
+          ord_transacciones_pago: true,
+          ord_direcciones_envio: true,
+          seg_usuarios: {
+            select: {
+              id: true,
+              nombre: true,
+              apellido: true,
+              email: true,
+              telefono: true,
+            },
+          },
+        },
+      });
+    });
+
+    if (!result) {
+      throw new NotFoundError('Orden no encontrada después de la actualización');
+    }
+
+    return result;
+  }
+
+async listarOrdenes(usuarioId: string, filtros: any, roles: string[]) {
+  const { page = 1, limit = 10, estado, cliente, fecha_inicio, fecha_fin } = filtros;
   const skip = (Number(page) - 1) * Number(limit);
 
-  // ✅ Eliminar el filtro por cliente_id para que devuelva TODAS las órdenes
+  const isAdmin = roles.some((role) =>
+    ['ADMINISTRADOR', 'GERENTE_VENTAS', 'GERENTE_INVENTARIO', 'VENDEDOR'].includes(role)
+  );
+
   const where: any = {};
-  
+  if (!isAdmin) {
+    where.cliente_id = usuarioId;
+  }
+
   // Solo filtrar por estado si viene
   if (estado && estado !== 'todos') {
     where.estado = estado;
+  }
+
+  if (isAdmin && cliente) {
+    where.OR = [
+      { seg_usuarios: { nombre: { contains: cliente, mode: 'insensitive' } } },
+      { seg_usuarios: { apellido: { contains: cliente, mode: 'insensitive' } } },
+      { seg_usuarios: { email: { contains: cliente, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (fecha_inicio || fecha_fin) {
+    where.fecha_pedido = {};
+    if (fecha_inicio) {
+      where.fecha_pedido.gte = new Date(fecha_inicio);
+    }
+    if (fecha_fin) {
+      const fechaFinDate = new Date(fecha_fin);
+      fechaFinDate.setHours(23, 59, 59, 999);
+      where.fecha_pedido.lte = fechaFinDate;
+    }
   }
 
   const [ordenes, total] = await Promise.all([

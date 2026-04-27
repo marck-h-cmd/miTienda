@@ -75,6 +75,8 @@ export default function ProductoFormPage() {
     estado: producto.estado,
   } : undefined;
 
+  const initialImageUrl = producto?.cat_imagenes_producto?.find((img) => img.es_principal)?.url || producto?.cat_imagenes_producto?.[0]?.url;
+
   // Extraer arrays de categorías y marcas
   const categoriasList = categorias?.data || categorias?.categorias || [];
   const marcasList = marcas?.data || marcas?.marcas || [];
@@ -89,6 +91,7 @@ export default function ProductoFormPage() {
         <CardContent className="pt-6">
           <ProductForm
             initialData={initialData}
+            initialImageUrl={initialImageUrl}
             onSubmit={(data) => isEditing ? updateMutation.mutate(data) : createMutation.mutate(data)}
             isLoading={createMutation.isPending || updateMutation.isPending}
             categorias={categoriasList}

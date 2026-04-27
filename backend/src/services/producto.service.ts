@@ -1,9 +1,35 @@
+import fs from 'fs';
+import path from 'path';
 import { seg_usuarios } from './../../node_modules/.prisma/client/default';
 import prisma from '../config/database';
 import { NotFoundError } from '../middlewares/errorHandler';
 import { Prisma } from '@prisma/client';
+import { config } from '../config';
+
+const productoUploadsPath = path.join(process.cwd(), 'uploads', 'productos');
+fs.mkdirSync(productoUploadsPath, { recursive: true });
 
 export class ProductoService {
+  private parseImageBase64(imagenBase64: string) {
+    const match = imagenBase64.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('Formato de imagen inválido');
+    }
+
+    const mimeType = match[1];
+    const base64Data = match[2];
+    const ext = mimeType.split('/')[1] === 'jpeg' ? 'jpg' : mimeType.split('/')[1];
+    return { ext, base64Data };
+  }
+
+  private async saveProductImage(imagenBase64: string) {
+    const { ext, base64Data } = this.parseImageBase64(imagenBase64);
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+    const imagePath = path.join(productoUploadsPath, filename);
+    const buffer = Buffer.from(base64Data, 'base64');
+    await fs.promises.writeFile(imagePath, buffer);
+    return `${config.app.apiUrl}/uploads/productos/${filename}`;
+  }
   async listar(filtros: any) {
     const { page = 1, limit = 12, categoria, marca, precio_min, precio_max, busqueda, ordenar_por } = filtros;
     const skip = (Number(page) - 1) * Number(limit);
@@ -69,7 +95,23 @@ export class ProductoService {
   }
 
   async crear(data: any) {
-    const producto = await prisma.cat_productos.create({ data });
+    const imagenBase64 = data.imagenBase64;
+    const createData: any = { ...data };
+    delete createData.imagenBase64;
+
+    if (imagenBase64) {
+      const imageUrl = await this.saveProductImage(imagenBase64);
+      createData.cat_imagenes_producto = {
+        create: {
+          url: imageUrl,
+          es_principal: true,
+          orden: 0,
+        },
+      };
+    }
+
+    const producto = await prisma.cat_productos.create({ data: createData });
+
     // Crear registro de stock inicial
     await prisma.inv_stock_producto.create({
       data: {
@@ -78,12 +120,34 @@ export class ProductoService {
         cantidad_reservada: 0,
       },
     });
+
     return producto;
   }
 
   async actualizar(id: string, data: any) {
     await this.obtenerPorId(id);
-    return prisma.cat_productos.update({ where: { id }, data });
+
+    const imagenBase64 = data.imagenBase64;
+    const updateData: any = { ...data };
+    delete updateData.imagenBase64;
+
+    if (imagenBase64) {
+      const imageUrl = await this.saveProductImage(imagenBase64);
+      await prisma.cat_imagenes_producto.updateMany({
+        where: { producto_id: id, es_principal: true },
+        data: { es_principal: false },
+      });
+
+      updateData.cat_imagenes_producto = {
+        create: {
+          url: imageUrl,
+          es_principal: true,
+          orden: 0,
+        },
+      };
+    }
+
+    return prisma.cat_productos.update({ where: { id }, data: updateData });
   }
 
   async eliminar(id: string) {

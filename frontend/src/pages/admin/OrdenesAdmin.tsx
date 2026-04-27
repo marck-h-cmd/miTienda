@@ -4,25 +4,33 @@ import { ordenService } from '@/services/orden.service';
 import { reporteService } from '@/services/reporte.service';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import { ESTADOS_ORDEN } from '@/types';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/ui/Pagination';
-import { Download, Eye } from 'lucide-react';
+import { Download, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function OrdenesAdmin() {
   const [page, setPage] = useState(1);
   const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroCliente, setFiltroCliente] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-ordenes', page, filtroEstado],
+    queryKey: ['admin-ordenes', page, filtroEstado, filtroCliente, fechaInicio, fechaFin],
     queryFn: () => ordenService.listar({
       page: String(page),
       limit: '10',
       ...(filtroEstado && filtroEstado !== 'todos' && { estado: filtroEstado }),
+      ...(filtroCliente && { cliente: filtroCliente }),
+      ...(fechaInicio && { fecha_inicio: fechaInicio }),
+      ...(fechaFin && { fecha_fin: fechaFin }),
     }),
   });
 
@@ -48,12 +56,12 @@ export default function OrdenesAdmin() {
 
       <Card>
         <CardHeader>
-          <div className="flex gap-4">
+          <div className="grid gap-4 md:grid-cols-4">
             <Select 
               value={filtroEstado} 
               onValueChange={setFiltroEstado}
             >
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
@@ -65,6 +73,44 @@ export default function OrdenesAdmin() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Input
+              value={filtroCliente}
+              onChange={(e) => setFiltroCliente(e.target.value)}
+              placeholder="Buscar cliente, email o apellido"
+              className="w-full"
+            />
+
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                placeholder="Desde"
+                className="w-full"
+              />
+              <Input
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                placeholder="Hasta"
+                className="w-full"
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFiltroEstado('todos');
+                setFiltroCliente('');
+                setFechaInicio('');
+                setFechaFin('');
+                setPage(1);
+                queryClient.invalidateQueries({ queryKey: ['admin-ordenes'] });
+              }}
+            >
+              Limpiar filtros
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -117,9 +163,14 @@ export default function OrdenesAdmin() {
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Link to={`/admin/ordenes/${orden.id}/editar`}>
+                          <Button variant="ghost" size="icon" title="Editar orden">
+                            <Edit2 size={16} />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => reporteService.facturaOrden(orden.id)}
                           title="Descargar factura"
                         >

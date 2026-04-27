@@ -215,6 +215,8 @@ export class ReporteService {
       ];
     });
 
+    const rowColors = stock.map((item) => item.cantidad_fisica === 0 ? 'red' : undefined);
+
     const doc = crearDocumentoPDF({
       titulo: 'Inventario Valorizado',
       subtitulo: `Generado: ${formatearFecha(new Date())}`,
@@ -239,7 +241,7 @@ export class ReporteService {
       { header: 'Margen',    width: 1.0, align: 'right', format: fmtN },
     ];
 
-    agregarTabla(doc, columns, rows, { showTotals: false });
+    agregarTabla(doc, columns, rows, { showTotals: false, rowColors });
 
     agregarDivisor(doc);
     agregarResumen(doc, [
@@ -362,7 +364,9 @@ export class ReporteService {
       ];
     });
 
-    agregarTabla(doc, columns, rows, { showTotals: false });
+    const rowColors = productos.map((item) => item.cantidad_fisica === 0 ? 'red' : undefined);
+
+    agregarTabla(doc, columns, rows, { showTotals: false, rowColors });
 
     agregarPiePagina(doc);
     return doc;

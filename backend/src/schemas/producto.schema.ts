@@ -15,6 +15,7 @@ export const crearProductoSchema = z.object({
   peso: z.number().positive().optional(),
   stock_minimo: z.number().int().positive().default(5),
   estado: z.enum(['activo', 'inactivo', 'borrador']).default('activo'),
+  imagenBase64: z.string().optional(),
 });
 
 export const actualizarProductoSchema = crearProductoSchema.partial();

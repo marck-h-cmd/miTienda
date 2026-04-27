@@ -3,7 +3,7 @@ import { ordenController } from '../controllers/orden.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { checkoutLimiter } from '../middlewares/rateLimiter';
 import { validateBody } from '../middlewares/validator';
-import { checkoutSchema } from '../schemas/orden.schema';
+import { checkoutSchema, actualizarEstadoSchema, actualizarOrdenSchema } from '../schemas/orden.schema';
 
 const router = Router();
 
@@ -25,10 +25,24 @@ router.post(
   ordenController.iniciarCheckout.bind(ordenController)
 );
 
-// GET  /api/v1/ordenes/:id
-router.get('/:id', ordenController.obtenerOrden.bind(ordenController));
+// PATCH /api/v1/ordenes/:id
+router.patch(
+  '/:id',
+  validateBody(actualizarOrdenSchema),
+  ordenController.actualizarOrden.bind(ordenController)
+);
+
+// PATCH /api/v1/ordenes/:id/estado
+router.patch(
+  '/:id/estado',
+  validateBody(actualizarEstadoSchema),
+  ordenController.actualizarEstado.bind(ordenController)
+);
 
 // POST /api/v1/ordenes/:id/cancelar
 router.post('/:id/cancelar', ordenController.cancelarOrden.bind(ordenController));
+
+// GET  /api/v1/ordenes/:id
+router.get('/:id', ordenController.obtenerOrden.bind(ordenController));
 
 export default router;

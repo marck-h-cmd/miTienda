@@ -3,14 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { productoService } from '@/services/producto.service';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/ui/Pagination';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { Plus, Search, Edit, Trash2, Package, Filter } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ProductosAdmin() {
@@ -19,19 +19,19 @@ export default function ProductosAdmin() {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Construir filtros como en el catálogo
   const filters: Record<string, string> = {};
   if (search) filters.busqueda = search;
   if (filtroEstado !== 'todos') filters.estado = filtroEstado;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-productos', page, limit, filters],
-    queryFn: () => productoService.listar({ 
-      page: String(page), 
-      limit: String(limit), 
-      ...filters 
+    queryFn: () => productoService.listar({
+      page: String(page),
+      limit: String(limit),
+      ...filters
     }),
     retry: 1,
   });
@@ -48,7 +48,6 @@ export default function ProductosAdmin() {
     },
   });
 
-  // Extraer datos como en el catálogo
   const productos = Array.isArray(data?.productos) ? data.productos : [];
   const total = typeof data?.total === 'number' ? data.total : 0;
   const currentPage = data?.page || 1;
@@ -70,21 +69,19 @@ export default function ProductosAdmin() {
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Búsqueda */}
             <div className="relative flex-1">
               <Search size={18} className="absolute left-3 top-3 text-gray-400" />
               <Input
                 placeholder="Buscar productos por nombre o SKU..."
                 value={search}
-                onChange={(e) => { 
-                  setSearch(e.target.value); 
-                  setPage(1); 
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
                 }}
                 className="pl-10"
               />
             </div>
 
-            {/* Filtro de estado */}
             <div className="w-48">
               <Select value={filtroEstado} onValueChange={(value) => {
                 setFiltroEstado(value);
@@ -102,7 +99,6 @@ export default function ProductosAdmin() {
               </Select>
             </div>
 
-            {/* Límite por página */}
             <div className="w-36">
               <Select value={String(limit)} onValueChange={(value) => {
                 setLimit(Number(value));
@@ -121,7 +117,6 @@ export default function ProductosAdmin() {
             </div>
           </div>
 
-          {/* Resultados count */}
           <div className="mt-4 text-sm text-gray-500">
             {total} productos encontrados
           </div>
@@ -141,8 +136,8 @@ export default function ProductosAdmin() {
               <Package size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-gray-500 text-lg">No hay productos disponibles</p>
               <p className="text-gray-400 text-sm mt-2">
-                {search || filtroEstado !== 'todos' 
-                  ? 'Intenta con otros filtros de búsqueda' 
+                {search || filtroEstado !== 'todos'
+                  ? 'Intenta con otros filtros de búsqueda'
                   : 'Comienza agregando tu primer producto'}
               </p>
               {!search && filtroEstado === 'todos' && (
@@ -160,6 +155,7 @@ export default function ProductosAdmin() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50">
+                      <th className="text-center p-3 font-semibold">Imagen</th>
                       <th className="text-left p-3 font-semibold">SKU</th>
                       <th className="text-left p-3 font-semibold">Producto</th>
                       <th className="text-left p-3 font-semibold">Categoría</th>
@@ -172,6 +168,20 @@ export default function ProductosAdmin() {
                   <tbody>
                     {productos.map((producto) => (
                       <tr key={producto.id} className="border-b hover:bg-gray-50 transition-colors">
+                        <td className="p-3 text-center">
+                          {producto.cat_imagenes_producto?.[0] ? (
+                            <img
+                              src={producto.cat_imagenes_producto[0].url}
+                              alt={producto.nombre}
+                              className="w-12 h-12 object-cover rounded cursor-pointer mx-auto"
+                              onClick={() => setSelectedImage(producto.cat_imagenes_producto![0].url)}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center mx-auto">
+                              <Package size={16} className="text-gray-400" />
+                            </div>
+                          )}
+                        </td>
                         <td className="p-3 font-mono text-xs">{producto.sku}</td>
                         <td className="p-3">
                           <div className="font-medium">{producto.nombre}</div>
@@ -205,7 +215,7 @@ export default function ProductosAdmin() {
                         </td>
                         <td className="p-3 text-center">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            (producto.inv_stock_producto?.[0]?.cantidad_fisica || 0) > 10 
+                            (producto.inv_stock_producto?.[0]?.cantidad_fisica || 0) > 10
                               ? 'bg-green-100 text-green-800'
                               : (producto.inv_stock_producto?.[0]?.cantidad_fisica || 0) > 0
                               ? 'bg-yellow-100 text-yellow-800'
@@ -220,7 +230,7 @@ export default function ProductosAdmin() {
                             producto.estado === 'inactivo' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {producto.estado === 'activo' ? 'Activo' : 
+                            {producto.estado === 'activo' ? 'Activo' :
                              producto.estado === 'inactivo' ? 'Inactivo' : 'Borrador'}
                           </span>
                         </td>
@@ -261,6 +271,30 @@ export default function ProductosAdmin() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de imagen sin dependencias externas */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold">Vista previa de imagen</h2>
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+              >
+                ✕
+              </button>
+            </div>
+            <img src={selectedImage} alt="Vista previa" className="w-full h-auto rounded" />
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={!!deleteId}

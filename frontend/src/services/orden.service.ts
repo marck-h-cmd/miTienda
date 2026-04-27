@@ -34,4 +34,16 @@ export const ordenService = {
     const { data } = await api.patch<ApiResponse>(`/ordenes/${id}/estado`, { estado });
     return data;
   },
+
+  actualizar: async (id: string, payload: Record<string, any>) => {
+    const { data } = await api.patch<ApiResponse<IOrden>>(`/ordenes/${id}`, payload);
+    return data.data!;
+  },
+
+  obtenerOpcionesEnvio: async () => {
+    const { data } = await api.get<ApiResponse<{ direcciones: any[]; metodos: any[] }>>(
+      '/ordenes/opciones-envio'
+    );
+    return data.data!;
+  },
 };

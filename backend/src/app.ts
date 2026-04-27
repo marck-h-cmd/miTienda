@@ -1,4 +1,6 @@
 import express, { Application } from 'express';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -10,6 +12,10 @@ import routes from './routes';
 import { swaggerSpec } from './utils/swagger';
 
 const app: Application = express();
+
+const uploadsPath = path.join(process.cwd(), 'uploads');
+fs.mkdirSync(uploadsPath, { recursive: true });
+app.use('/uploads', express.static(uploadsPath));
 
 // Middlewares globales
 app.use(helmet());

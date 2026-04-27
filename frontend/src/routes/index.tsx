@@ -26,6 +26,7 @@ import Dashboard from '@/pages/admin/Dashboard';
 import ProductosAdmin from '@/pages/admin/ProductosAdmin';
 import ProductoFormPage from '@/pages/admin/ProductoFormPage';
 import OrdenesAdmin from '@/pages/admin/OrdenesAdmin';
+import OrdenEditPage from '@/pages/admin/OrdenEditPage';
 import InventarioAdmin from '@/pages/admin/InventarioAdmin';
 import ClientesAdmin from '@/pages/admin/ClientesAdmin';
 import Reportes from '@/pages/admin/Reportes';
@@ -93,6 +94,7 @@ export default function AppRoutes() {
             }
           />
           <Route path="/admin/ordenes" element={<OrdenesAdmin />} />
+          <Route path="/admin/ordenes/:id/editar" element={<OrdenEditPage />} />
           <Route path="/admin/inventario" element={<InventarioAdmin />} />
           <Route path="/admin/clientes" element={<ClientesAdmin />} />
           <Route path="/admin/reportes" element={<Reportes />} />
