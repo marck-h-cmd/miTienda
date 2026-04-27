@@ -39,6 +39,11 @@ export default function CartDrawer() {
             <div className="space-y-4">
               {items.map((item) => (
                 <div key={item.id} className="flex gap-3 border-b pb-4">
+                  {(() => {
+                    const stock = item.cat_productos?.inv_stock_producto?.[0]?.cantidad_fisica ?? 0;
+                    const canIncrease = stock > 0 && item.cantidad < stock;
+                    return (
+                      <>
                   <img
                     src={
                       item.cat_productos?.cat_imagenes_producto?.[0]?.url ||
@@ -64,8 +69,9 @@ export default function CartDrawer() {
                       </button>
                       <span className="w-8 text-center text-sm">{item.cantidad}</span>
                       <button
-                        onClick={() => actualizar({ itemId: item.id, cantidad: item.cantidad + 1 })}
+                        onClick={() => actualizar({ itemId: item.id, cantidad: Math.min(item.cantidad + 1, stock) })}
                         className="p-1 border rounded hover:bg-gray-100"
+                        disabled={!canIncrease}
                       >
                         <Plus size={14} />
                       </button>
@@ -77,6 +83,9 @@ export default function CartDrawer() {
                       </button>
                     </div>
                   </div>
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

@@ -21,7 +21,7 @@ export default function Catalogo() {
 
 
   // Extrae los productos de forma segura
-  const productos = Array.isArray(data?.productos) ? data.productos : [];
+  const productos = data?.data ?? [];
   const total = typeof data?.total === 'number' ? data.total : 0;
   
 

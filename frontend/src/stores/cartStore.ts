@@ -18,6 +18,16 @@ interface CartState {
   getItemCount: () => number;
 }
 
+const getItemStock = (item: ICarritoItem): number | undefined =>
+  item.cat_productos?.inv_stock_producto?.[0]?.cantidad_fisica;
+
+const clampItemQuantityToStock = (item: ICarritoItem): ICarritoItem => {
+  const stock = getItemStock(item);
+  if (stock === undefined) return item;
+  if (stock <= 0) return { ...item, cantidad: 0 };
+  return { ...item, cantidad: Math.min(item.cantidad, stock) };
+};
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -26,21 +36,39 @@ export const useCartStore = create<CartState>()(
       couponCode: null,
       discount: 0,
       
-      setItems: (items) => set({ items }),
+      setItems: (items) =>
+        set({
+          items: items
+            .map(clampItemQuantityToStock)
+            .filter((i) => i.cantidad > 0),
+        }),
       
       addItem: (newItem) =>
         set((state) => {
+          const stock = getItemStock(newItem);
+          if (stock !== undefined && stock <= 0) return { items: state.items };
+
           const existing = state.items.find((i) => i.producto_id === newItem.producto_id);
           if (existing) {
+            const maxStock = getItemStock(existing) ?? stock;
+            const nuevaCantidad =
+              maxStock === undefined
+                ? existing.cantidad + newItem.cantidad
+                : Math.min(existing.cantidad + newItem.cantidad, maxStock);
+            if (nuevaCantidad <= 0) return { items: state.items.filter((i) => i.id !== existing.id) };
+
             return {
               items: state.items.map((i) =>
                 i.producto_id === newItem.producto_id
-                  ? { ...i, cantidad: i.cantidad + newItem.cantidad }
+                  ? { ...i, cantidad: nuevaCantidad }
                   : i
               ),
             };
           }
-          return { items: [...state.items, newItem] };
+          const cantidadInicial =
+            stock === undefined ? newItem.cantidad : Math.min(newItem.cantidad, stock);
+          if (cantidadInicial <= 0) return { items: state.items };
+          return { items: [...state.items, { ...newItem, cantidad: cantidadInicial }] };
         }),
       
       removeItem: (itemId) =>
@@ -49,7 +77,13 @@ export const useCartStore = create<CartState>()(
       updateQuantity: (itemId, quantity) =>
         set((state) => ({
           items: state.items
-            .map((i) => (i.id === itemId ? { ...i, cantidad: Math.max(0, quantity) } : i))
+            .map((i) => {
+              if (i.id !== itemId) return i;
+              const stock = getItemStock(i);
+              const safeQty =
+                stock === undefined ? Math.max(0, quantity) : Math.max(0, Math.min(quantity, stock));
+              return { ...i, cantidad: safeQty };
+            })
             .filter((i) => i.cantidad > 0),
         })),
       
