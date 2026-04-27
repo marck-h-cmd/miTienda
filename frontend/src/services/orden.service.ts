@@ -16,6 +16,7 @@ export const ordenService = {
   
   listar: async (params?: Record<string, string>) => {
     const { data } = await api.get<PaginatedResponse<IOrden>>('/ordenes', { params });
+    console.log("ordenes", data);
     return data;
   },
   

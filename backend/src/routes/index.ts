@@ -9,6 +9,12 @@ import reporteRoutes from './reporte.routes';
 import dashboardRoutes from './dashboard.routes';
 import estadisticasRoutes from './estadisticas.routes';
 import webhookRoutes from './webhook.routes';
+import categoriaRoutes from './categoria.routes';
+import marcaRoutes from './marca.routes';
+import unidadMedidaRoutes from './unidadMedida.routes';
+import subcategoriaRoutes from './subcategoria.routes';
+
+
 
 const router = Router();
 
@@ -33,5 +39,9 @@ router.use('/reportes', reporteRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/estadisticas', estadisticasRoutes);
 router.use('/webhooks', webhookRoutes);
+router.use('/categorias', categoriaRoutes);
+router.use('/marcas', marcaRoutes);
+router.use('/unidadesMedida', unidadMedidaRoutes);
+router.use('/subcategorias', subcategoriaRoutes);
 
 export default router;

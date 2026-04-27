@@ -1,3 +1,4 @@
+// services/inventario.service.ts
 import api from './api';
 import { ApiResponse, PaginatedResponse, IStockInventario, IProveedor } from '@/types';
 
@@ -13,6 +14,7 @@ export const inventarioService = {
   },
   
   ajustarStock: async (ajuste: { producto_id: string; cantidad: number; tipo: string; motivo: string }) => {
+    // ✅ Usar la ruta correcta (la que existe en el backend)
     const { data } = await api.post<ApiResponse>('/inventario/ajustes', ajuste);
     return data;
   },

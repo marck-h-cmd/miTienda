@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,8 +12,8 @@ const productoSchema = z.object({
   nombre: z.string().min(3, 'Nombre debe tener al menos 3 caracteres'),
   descripcion_corta: z.string().optional(),
   descripcion_larga: z.string().optional(),
-  categoria_id: z.string().uuid('Selecciona una categoría'),
-  marca_id: z.string().uuid('Selecciona una marca').optional(),
+  categoria_id: z.string().min(1, 'Selecciona una categoría'),
+  marca_id: z.string().optional(),
   precio_costo: z.coerce.number().positive('Debe ser positivo'),
   precio_venta: z.coerce.number().positive('Debe ser positivo'),
   precio_oferta: z.coerce.number().positive().optional(),
@@ -30,8 +31,14 @@ interface ProductFormProps {
   marcas?: Array<{ id: string; nombre: string }>;
 }
 
-export default function ProductForm({ initialData, onSubmit, isLoading, categorias = [], marcas = [] }: ProductFormProps) {
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProductoFormData>({
+export default function ProductForm({ 
+  initialData, 
+  onSubmit, 
+  isLoading, 
+  categorias = [], 
+  marcas = [] 
+}: ProductFormProps) {
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProductoFormData>({
     resolver: zodResolver(productoSchema),
     defaultValues: {
       estado: 'activo',
@@ -39,6 +46,21 @@ export default function ProductForm({ initialData, onSubmit, isLoading, categori
       ...initialData,
     },
   });
+
+  // Actualizar el formulario cuando cambian los initialData
+  useEffect(() => {
+    if (initialData) {
+      Object.entries(initialData).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setValue(key as any, value);
+        }
+      });
+    }
+  }, [initialData, setValue]);
+
+  const selectedCategoria = watch('categoria_id');
+  const selectedMarca = watch('marca_id');
+  const selectedEstado = watch('estado');
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
@@ -60,7 +82,10 @@ export default function ProductForm({ initialData, onSubmit, isLoading, categori
         {/* Categoría */}
         <div>
           <Label htmlFor="categoria_id">Categoría *</Label>
-          <Select onValueChange={(value) => setValue('categoria_id', value)}>
+          <Select 
+            value={selectedCategoria} 
+            onValueChange={(value) => setValue('categoria_id', value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar categoría" />
             </SelectTrigger>
@@ -76,7 +101,10 @@ export default function ProductForm({ initialData, onSubmit, isLoading, categori
         {/* Marca */}
         <div>
           <Label htmlFor="marca_id">Marca</Label>
-          <Select onValueChange={(value) => setValue('marca_id', value)}>
+          <Select 
+            value={selectedMarca} 
+            onValueChange={(value) => setValue('marca_id', value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar marca" />
             </SelectTrigger>
@@ -112,12 +140,16 @@ export default function ProductForm({ initialData, onSubmit, isLoading, categori
         <div>
           <Label htmlFor="stock_minimo">Stock Mínimo</Label>
           <Input id="stock_minimo" type="number" {...register('stock_minimo')} />
+          {errors.stock_minimo && <p className="text-red-500 text-xs mt-1">{errors.stock_minimo.message}</p>}
         </div>
 
         {/* Estado */}
         <div>
           <Label htmlFor="estado">Estado</Label>
-          <Select onValueChange={(value: 'activo' | 'inactivo' | 'borrador') => setValue('estado', value)}>
+          <Select 
+            value={selectedEstado} 
+            onValueChange={(value: 'activo' | 'inactivo' | 'borrador') => setValue('estado', value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar estado" />
             </SelectTrigger>
@@ -150,7 +182,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading, categori
 
       <div className="flex gap-4">
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Guardando...' : initialData ? 'Actualizar Producto' : 'Crear Producto'}
+          {isLoading ? 'Guardando...' : initialData?.nombre ? 'Actualizar Producto' : 'Crear Producto'}
         </Button>
         <Button type="button" variant="outline" onClick={() => window.history.back()}>
           Cancelar

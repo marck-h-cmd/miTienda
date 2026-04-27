@@ -36,6 +36,11 @@ export class InventarioController {
         ...req.body,
         usuario_id: req.user!.userId,
       };
+        console.log('=== AJUSTAR STOCK ===');
+  console.log('Body recibido:', req.body);
+  console.log('Usuario:', req.user?.userId);
+  console.log('URL:', req.url);
+  console.log('Method:', req.method);
       const resultado = await inventarioService.ajustarStock(data);
       sendSuccess(res, resultado, 'Stock ajustado exitosamente');
     } catch (error) {

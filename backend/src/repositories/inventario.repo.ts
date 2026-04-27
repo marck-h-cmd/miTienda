@@ -53,6 +53,19 @@ export class InventarioRepository {
     return prisma.inv_movimientos_inventario.count({ where: { producto_id: productoId } });
   }
 
+  async createStock(data: {
+  producto_id: string;
+  cantidad_fisica: number;
+  cantidad_reservada: number;
+}) {
+  return prisma.inv_stock_producto.create({
+    data: {
+      producto_id: data.producto_id,
+      cantidad_fisica: data.cantidad_fisica,
+      cantidad_reservada: data.cantidad_reservada,
+    },
+  });
+}
   async createAjuste(data: any) {
     return prisma.inv_ajustes.create({
       data: {

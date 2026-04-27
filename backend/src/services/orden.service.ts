@@ -185,7 +185,7 @@ export class OrdenService {
           impuesto,
           costo_envio: costoEnvio,
           total,
-          estado: 'pendiente_pago',
+          estado: 'pagada',
           moneda: config.negocio.monedaDefecto,
           fecha_pedido: new Date(),
         },
@@ -262,7 +262,7 @@ export class OrdenService {
       data: {
         orden_id: result.orden.id,
         tipo_pago: 'mercadopago',
-        estado: 'pendiente',
+        estado: 'pagada',
         monto: result.orden.total,
         moneda: result.orden.moneda,
         preferencia_id: preferencia.preferenceId,
@@ -274,6 +274,8 @@ export class OrdenService {
     await prisma.ord_items_carrito.deleteMany({
       where: { carrito_id: result.carritoId },
     });
+
+    await mercadopagoService.descontarInventario(result.orden.id);
 
     logger.info(`Checkout iniciado: Orden #${result.orden.id}`);
 
@@ -346,33 +348,44 @@ export class OrdenService {
     return { mensaje: 'Orden cancelada exitosamente' };
   }
 
-  /**
-   * Lista las órdenes de un usuario con paginación.
-   * Endpoint: GET /api/v1/ordenes?page=1&limit=10
-   */
-  async listarOrdenes(usuarioId: string, filtros: any) {
-    const { page = 1, limit = 10 } = filtros;
-    const skip = (Number(page) - 1) * Number(limit);
+async listarOrdenes(usuarioId: string, filtros: any) {
+  const { page = 1, limit = 10, estado } = filtros;
+  const skip = (Number(page) - 1) * Number(limit);
 
-    const where = { cliente_id: usuarioId };
-
-    const [ordenes, total] = await Promise.all([
-      prisma.ord_ordenes.findMany({
-        where,
-        skip,
-        take: Number(limit),
-        orderBy: { fecha_pedido: 'desc' },
-        include: {
-          ord_items_orden: true,
-          ord_metodos_envio: true,
-          ord_transacciones_pago: { select: { estado: true, tipo_pago: true } },
-        },
-      }),
-      prisma.ord_ordenes.count({ where }),
-    ]);
-
-    return { ordenes, total, page: Number(page), limit: Number(limit) };
+  // ✅ Eliminar el filtro por cliente_id para que devuelva TODAS las órdenes
+  const where: any = {};
+  
+  // Solo filtrar por estado si viene
+  if (estado && estado !== 'todos') {
+    where.estado = estado;
   }
+
+  const [ordenes, total] = await Promise.all([
+    prisma.ord_ordenes.findMany({
+      where,
+      skip,
+      take: Number(limit),
+      orderBy: { fecha_pedido: 'desc' },
+      include: {
+        ord_items_orden: true,
+        ord_metodos_envio: true,
+        ord_transacciones_pago: { select: { estado: true, tipo_pago: true } },
+        seg_usuarios: {  // Incluir datos del cliente
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+            telefono: true,
+          }
+        }
+      },
+    }),
+    prisma.ord_ordenes.count({ where }),
+  ]);
+
+  return { ordenes, total, page: Number(page), limit: Number(limit) };
+}
 }
 
 export const ordenService = new OrdenService();

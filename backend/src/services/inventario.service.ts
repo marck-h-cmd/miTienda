@@ -96,38 +96,76 @@ export class InventarioService {
   }
 
   async ajustarStock(data: {
-    producto_id: string;
-    cantidad: number;
-    tipo: string;
-    motivo: string;
-    usuario_id: string;
-  }) {
-    const stock = await inventarioRepo.findStockByProducto(data.producto_id);
-    if (!stock) throw new NotFoundError('Stock no encontrado');
-
-    const nuevaCantidad = data.tipo === 'positivo'
-      ? stock.cantidad_fisica + data.cantidad
-      : stock.cantidad_fisica - data.cantidad;
-
-    if (nuevaCantidad < 0) throw new ConflictError('Stock insuficiente para el ajuste');
-
-    await prisma.$transaction(async (tx) => {
-      await tx.inv_stock_producto.update({
-        where: { producto_id: data.producto_id },
-        data: { cantidad_fisica: nuevaCantidad },
-      });
-      await tx.inv_movimientos_inventario.create({
-        data: {
-          producto_id: data.producto_id,
-          tipo_movimiento: 'ajuste',
-          cantidad: data.cantidad,
-          motivo: data.motivo,
-        },
-      });
+  producto_id: string;
+  cantidad: number;
+  tipo: string;
+  motivo: string;
+  usuario_id: string;
+}) {
+  // Buscar producto por ID o SKU
+  let producto = await prisma.cat_productos.findUnique({
+    where: { id: data.producto_id }
+  });
+  
+  // Si no se encuentra por ID, buscar por SKU
+  if (!producto) {
+    producto = await prisma.cat_productos.findFirst({
+      where: { sku: data.producto_id }
     });
-
-    return { mensaje: 'Stock ajustado exitosamente', cantidad_actual: nuevaCantidad };
   }
+  
+  if (!producto) {
+    throw new NotFoundError(`Producto no encontrado con ID o SKU: ${data.producto_id}`);
+  }
+  
+  // Buscar o crear stock para el producto
+  let stock = await inventarioRepo.findStockByProducto(producto.id);
+  
+  if (!stock) {
+    // Crear registro de stock si no existe
+    stock = await inventarioRepo.createStock({
+      producto_id: producto.id,
+      cantidad_fisica: 0,
+      cantidad_reservada: 0
+    });
+  }
+  
+  const nuevaCantidad = data.tipo === 'positivo'
+    ? stock.cantidad_fisica + data.cantidad
+    : stock.cantidad_fisica - data.cantidad;
+
+  if (nuevaCantidad < 0) {
+    throw new ConflictError(`Stock insuficiente. Stock actual: ${stock.cantidad_fisica}`);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.inv_stock_producto.update({
+      where: { producto_id: producto.id },
+      data: { cantidad_fisica: nuevaCantidad },
+    });
+    
+    await tx.inv_movimientos_inventario.create({
+      data: {
+        producto_id: producto.id,
+        tipo_movimiento: 'ajuste',
+        cantidad: data.cantidad,
+        motivo: data.motivo,
+        referencia_id: data.tipo,
+        fecha_movimiento: new Date(),
+      },
+    });
+  });
+
+  return { 
+    mensaje: 'Stock ajustado exitosamente', 
+    cantidad_actual: nuevaCantidad,
+    producto: {
+      id: producto.id,
+      sku: producto.sku,
+      nombre: producto.nombre
+    }
+  };
+}
 
   async crearAjusteInventario(data: {
     motivo: string;

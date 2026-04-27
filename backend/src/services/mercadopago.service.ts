@@ -208,7 +208,7 @@ export class MercadoPagoService {
   /**
    * Descuenta el inventario cuando un pago es aprobado
    */
-  private async descontarInventario(ordenId: string) {
+   async descontarInventario(ordenId: string) {
     const prisma = (await import('../config/database')).default;
 
     const items = await prisma.ord_items_orden.findMany({
