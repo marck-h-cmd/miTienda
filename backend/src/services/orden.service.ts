@@ -424,9 +424,8 @@ export class OrdenService {
         });
       }
 
-      let ordenActualizada = orden;
       if (Object.keys(updateData).length > 0) {
-        ordenActualizada = await tx.ord_ordenes.update({
+        await tx.ord_ordenes.update({
           where: { id: ordenId },
           data: updateData,
         });

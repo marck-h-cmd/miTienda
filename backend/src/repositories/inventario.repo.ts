@@ -54,18 +54,19 @@ export class InventarioRepository {
   }
 
   async createStock(data: {
-  producto_id: string;
-  cantidad_fisica: number;
-  cantidad_reservada: number;
-}) {
-  return prisma.inv_stock_producto.create({
-    data: {
-      producto_id: data.producto_id,
-      cantidad_fisica: data.cantidad_fisica,
-      cantidad_reservada: data.cantidad_reservada,
-    },
-  });
-}
+    producto_id: string;
+    cantidad_fisica: number;
+    cantidad_reservada: number;
+  }) {
+    return prisma.inv_stock_producto.create({
+      data: {
+        producto_id: data.producto_id,
+        cantidad_fisica: data.cantidad_fisica,
+        cantidad_reservada: data.cantidad_reservada,
+      },
+      include: { cat_productos: { select: { nombre: true, sku: true } } },
+    });
+  }
   async createAjuste(data: any) {
     return prisma.inv_ajustes.create({
       data: {

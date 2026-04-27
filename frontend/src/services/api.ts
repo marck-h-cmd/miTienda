@@ -1,8 +1,17 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
+const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) || 'http://localhost:3000';
+const normalizedApiBaseUrl = apiBaseUrl.replace(/\/+$/, '');
+const apiV1BaseUrl = `${normalizedApiBaseUrl}/api/v1`;
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: apiV1BaseUrl,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+const refreshClient = axios.create({
+  baseURL: apiV1BaseUrl,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -19,7 +28,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as typeof error.config & { _retry?: boolean };
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -28,7 +37,7 @@ api.interceptors.response.use(
         const refreshToken = useAuthStore.getState().refreshToken;
         if (!refreshToken) throw new Error('No refresh token');
         
-        const { data } = await axios.post('/api/v1/auth/refresh-token', { refreshToken });
+        const { data } = await refreshClient.post('/auth/refresh-token', { refreshToken });
         useAuthStore.getState().setTokens(data.data.accessToken, data.data.refreshToken);
         
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;

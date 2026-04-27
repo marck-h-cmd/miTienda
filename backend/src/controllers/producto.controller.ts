@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { productoService } from '../services/producto.service';
+import { sendPaginated } from '../utils/response';
 
 export class ProductoController {
   async listar(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await productoService.listar(req.query);
-      res.json({ success: true, ...result });
+      sendPaginated(res, result.productos, result.total, result.page, result.limit);
     } catch (error) {
       next(error);
     }

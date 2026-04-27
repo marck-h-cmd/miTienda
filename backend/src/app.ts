@@ -13,16 +13,24 @@ import { swaggerSpec } from './utils/swagger';
 
 const app: Application = express();
 
+app.set('trust proxy', 1);
+
 const uploadsPath = path.join(process.cwd(), 'uploads');
 fs.mkdirSync(uploadsPath, { recursive: true });
 app.use('/uploads', express.static(uploadsPath));
 
 // Middlewares globales
 app.use(helmet());
-app.use(cors({
-  origin: config.app.frontendUrl,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (config.app.corsOrigins.includes(origin)) return callback(null, true);
+      return callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));

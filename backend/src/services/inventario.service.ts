@@ -118,17 +118,13 @@ export class InventarioService {
     throw new NotFoundError(`Producto no encontrado con ID o SKU: ${data.producto_id}`);
   }
   
-  // Buscar o crear stock para el producto
-  let stock = await inventarioRepo.findStockByProducto(producto.id);
-  
-  if (!stock) {
-    // Crear registro de stock si no existe
-    stock = await inventarioRepo.createStock({
+  const stock =
+    (await inventarioRepo.findStockByProducto(producto.id)) ??
+    (await inventarioRepo.createStock({
       producto_id: producto.id,
       cantidad_fisica: 0,
-      cantidad_reservada: 0
-    });
-  }
+      cantidad_reservada: 0,
+    }));
   
   const nuevaCantidad = data.tipo === 'positivo'
     ? stock.cantidad_fisica + data.cantidad

@@ -16,7 +16,7 @@ export class SubcategoriaService {
 
     const subcategoria = await subcategoriaRepo.create({
       nombre: data.nombre,
-      categoria: { connect: { id: data.categoria_id } },
+      cat_categorias: { connect: { id: data.categoria_id } },
       
       activo: true
     });

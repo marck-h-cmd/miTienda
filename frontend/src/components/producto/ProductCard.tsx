@@ -13,7 +13,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ producto, viewMode = 'grid' }: ProductCardProps) {
-  const { setItems, toggleCart } = useCartStore();
+  const { items, setItems, toggleCart } = useCartStore();
   const { isAuthenticated } = useAuthStore();
 
   const imagenPrincipal =
@@ -24,6 +24,8 @@ export default function ProductCard({ producto, viewMode = 'grid' }: ProductCard
   const stock = producto.inv_stock_producto?.[0]?.cantidad_fisica ?? 0;
   const precio = producto.precio_oferta || producto.precio_venta;
   const tieneOferta = !!producto.precio_oferta;
+
+  const cantidadEnCarrito = items.find((i) => i.producto_id === producto.id)?.cantidad ?? 0;
   
 // Dentro del componente, añadir:
 const { isFavorito, toggleFavorito, isToggling } = useFavoritos();
@@ -34,6 +36,14 @@ const esFavorito = isFavorito(producto.id);
     e.preventDefault();
     if (!isAuthenticated) {
       toast.error('Inicia sesión para agregar al carrito');
+      return;
+    }
+    if (stock <= 0) {
+      toast.error('Producto sin stock');
+      return;
+    }
+    if (cantidadEnCarrito >= stock) {
+      toast.error(`No puedes agregar más de ${stock} unidades`);
       return;
     }
 
@@ -79,10 +89,10 @@ const esFavorito = isFavorito(producto.id);
           </div>
           <button
             onClick={handleAgregarCarrito}
-            disabled={stock === 0}
+            disabled={stock === 0 || cantidadEnCarrito >= stock}
             className="mt-2 bg-primary-600 text-white px-4 py-1 rounded text-sm disabled:opacity-50"
           >
-            {stock === 0 ? 'Agotado' : 'Agregar al Carrito'}
+            {stock === 0 ? 'Agotado' : cantidadEnCarrito >= stock ? 'Límite alcanzado' : 'Agregar al Carrito'}
           </button>
         </div>
       </Link>
@@ -132,13 +142,16 @@ const esFavorito = isFavorito(producto.id);
           <span className="text-lg font-bold text-primary-600">S/ {precio}</span>
           <button
             onClick={handleAgregarCarrito}
-            disabled={stock === 0}
+            disabled={stock === 0 || cantidadEnCarrito >= stock}
             className="bg-primary-600 text-white p-2 rounded-full hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ShoppingCart size={18} />
           </button>
         </div>
         {stock === 0 && <p className="text-red-500 text-xs mt-1">Agotado</p>}
+        {stock > 0 && cantidadEnCarrito >= stock && (
+          <p className="text-orange-600 text-xs mt-1">Máximo en carrito: {stock}</p>
+        )}
       </div>
     </Link>
   );

@@ -11,22 +11,22 @@ export const reporteService = {
     window.URL.revokeObjectURL(link.href);
   },
   
-  reporteOrdenes: (filtros?: Record<string, string>) => 
+  reporteOrdenes: (_filtros?: unknown) => 
     reporteService.descargarReporte('/reportes/operacionales/ordenes', 'reporte-ordenes.pdf'),
   
   reporteInventario: () =>
     reporteService.descargarReporte('/reportes/operacionales/inventario', 'reporte-inventario.pdf'),
   
-  reporteMovimientos: (filtros?: Record<string, string>) =>
+  reporteMovimientos: (_filtros?: unknown) =>
     reporteService.descargarReporte('/reportes/operacionales/movimientos', 'reporte-movimientos.pdf'),
   
   reporteStockBajo: () =>
     reporteService.descargarReporte('/reportes/operacionales/stock-bajo', 'reporte-stock-bajo.pdf'),
   
-  reportePagos: (filtros?: Record<string, string>) =>
+  reportePagos: (_filtros?: unknown) =>
     reporteService.descargarReporte('/reportes/operacionales/pagos', 'reporte-pagos.pdf'),
   
-  reporteDevoluciones: (filtros?: Record<string, string>) =>
+  reporteDevoluciones: (_filtros?: unknown) =>
     reporteService.descargarReporte('/reportes/operacionales/devoluciones', 'reporte-devoluciones.pdf'),
   
   facturaOrden: (ordenId: string) =>

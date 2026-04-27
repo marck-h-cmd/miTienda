@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "node scripts/dev-setup.js",
     "dev:quick": "tsx watch src/index.ts",
+    "postinstall": "npx prisma generate",
     "build": "tsc",
     "tsc": "tsc --outDir ./dist",
+    "render:build": "npm run prisma:generate && npx prisma db push --skip-generate && npm run build",
     "start": "node dist/index.js",
     "setup:db": "npx prisma db push --skip-generate && npx tsx prisma/seed.ts",
     "prisma:generate": "prisma generate",

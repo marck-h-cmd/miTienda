@@ -78,8 +78,8 @@ export default function ProductoFormPage() {
   const initialImageUrl = producto?.cat_imagenes_producto?.find((img) => img.es_principal)?.url || producto?.cat_imagenes_producto?.[0]?.url;
 
   // Extraer arrays de categorías y marcas
-  const categoriasList = categorias?.data || categorias?.categorias || [];
-  const marcasList = marcas?.data || marcas?.marcas || [];
+  const categoriasList = categorias?.data ?? [];
+  const marcasList = marcas?.data ?? [];
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

@@ -239,7 +239,7 @@ export function agregarTabla(
     totalsLabel?: string;
     alternateRows?: boolean;
     compact?: boolean;
-    rowColors?: string[];
+    rowColors?: Array<string | undefined>;
   }
 ): void {
   const opts = { alternateRows: true, compact: false, ...options };

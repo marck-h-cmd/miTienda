@@ -315,7 +315,7 @@ export class ReporteService {
   async generarReporteStockBajo() {
     const stock = await prisma.inv_stock_producto.findMany({
       where: {
-        cantidad_fisica: { gt: 0 },
+        cantidad_fisica: { gte: 0 },
         cat_productos:   { estado: 'activo', activo: true },
       },
       include: {

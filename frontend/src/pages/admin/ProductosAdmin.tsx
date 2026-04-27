@@ -48,7 +48,7 @@ export default function ProductosAdmin() {
     },
   });
 
-  const productos = Array.isArray(data?.productos) ? data.productos : [];
+  const productos = data?.data ?? [];
   const total = typeof data?.total === 'number' ? data.total : 0;
   const currentPage = data?.page || 1;
   const itemsPerPage = data?.limit || limit;

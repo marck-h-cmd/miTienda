@@ -30,6 +30,7 @@ export interface IProducto {
   estado: 'activo' | 'inactivo' | 'borrador';
   activo: boolean;
   cat_categorias?: { id: string; nombre: string };
+  cat_subcategorias?: { id: string; nombre: string };
   cat_marcas?: { id: string; nombre: string };
   cat_imagenes_producto?: IImagenProducto[];
   inv_stock_producto?: IStockProducto[];
